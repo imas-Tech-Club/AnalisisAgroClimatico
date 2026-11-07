@@ -3,7 +3,7 @@
 __pycache__/
 .ipynb_checkpoints/
 
-# Datos: se regeneran con src/ (ver README). Se versionan solo las tablas livianas del análisis.
+# Datos: se versionan solo la tabla maestra y los resultados del modelo.
 data/raw/
 data/processed/*/modis/
 data/processed/*/*.npy

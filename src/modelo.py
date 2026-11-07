@@ -2,7 +2,10 @@
 
 Se usa como librería desde los notebooks (`import modelo`) o por línea de comandos:
 
-    AGRO_REGION=santa_fe uv run python src/modelo.py
+    uv run python src/modelo.py
+
+Lee `data/processed/<region>/tabla_maestra.csv` (región por la variable AGRO_REGION, por defecto
+santa_fe) y deja ahí mismo las predicciones y las métricas.
 
 Regla de oro: nunca mezclar filas de la misma campaña entre entrenamiento y prueba.
 Todo lo que se "aprende" (promedios, tendencias, el XGBoost) se ajusta dentro de cada
@@ -17,13 +20,13 @@ Esquemas de validación:
 """
 from __future__ import annotations
 
+import os
 import warnings
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
 import pandas as pd
-
-import config
 
 warnings.filterwarnings("ignore", category=np.exceptions.RankWarning)
 
@@ -32,11 +35,18 @@ GRUPO = "campania"
 VARIABLES_MENSUALES = ("ndvi", "lluvia", "temp", "humedad_suelo")
 MESES_CORTE = {"dic": 4, "ene": 5, "feb": 6, "mar": 7, "abr": 8}  # hasta qué mes_N hay datos al predecir
 
+ROOT = Path(__file__).resolve().parents[1]
+REGION = os.environ.get("AGRO_REGION", "santa_fe")
+
+
+def carpeta(region: str = REGION) -> Path:
+    """Carpeta con la tabla maestra de la región y los resultados del modelo."""
+    return ROOT / "data" / "processed" / region
+
 
 # ------------------------------------------------------------------ datos
-def cargar_tabla(region: str = config.REGION) -> pd.DataFrame:
-    ruta = config.ROOT / "data" / "processed" / region / "tabla_maestra.csv"
-    return pd.read_csv(ruta, dtype={"depto_id": str})
+def cargar_tabla(region: str = REGION) -> pd.DataFrame:
+    return pd.read_csv(carpeta(region) / "tabla_maestra.csv", dtype={"depto_id": str})
 
 
 def entrenables(df: pd.DataFrame) -> pd.DataFrame:
@@ -177,13 +187,13 @@ def main():
     tablas = []
     for esquema in ("loco", "temporal"):
         pred = validar(df, modelos_estandar(), esquema)
-        pred.to_csv(config.PROC / f"predicciones_{esquema}.csv", index=False)
+        pred.to_csv(carpeta() / f"predicciones_{esquema}.csv", index=False)
         for por in [("modelo", "cultivo"), ("modelo", "cultivo", "fase_enso")]:
             m = comparar_con_base(metricas(pred, por)).reset_index()
             m.insert(0, "esquema", esquema)
             tablas.append(m)
     res = pd.concat(tablas, ignore_index=True)
-    res.to_csv(config.PROC / "metricas_modelos.csv", index=False)
+    res.to_csv(carpeta() / "metricas_modelos.csv", index=False)
     print(res[res["fase_enso"].isna()].drop(columns="fase_enso").to_string(index=False))
 
 

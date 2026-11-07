@@ -1,77 +1,56 @@
-# Predictor de rinde · El Niño 2026-27
+# Predictor de rinde · Frente 4: modelo
 
-Proyecto del Club de Informática (UADE). Estima el **rinde de soja y maíz por departamento durante la
-campaña**, a partir del verdor visto desde satélite (NDVI de MODIS), el clima y la fase ENSO, y mide
-cuánto error tiene el modelo, en especial en años Niño. Entrega final: 20/12/2026.
+Proyecto del Club de Informática (UADE) sobre El Niño 2026-27. Este repo tiene el **frente 4, el modelo
+de machine learning**: estima el rinde de soja y maíz por departamento durante la campaña y mide cuánto
+se equivoca, en especial en años Niño. Entrega final: 20/12/2026.
 
-**Región piloto propuesta:** Santa Fe (19 departamentos). La comparación con las otras candidatas está
-en [`docs/region_piloto.md`](docs/region_piloto.md).
+## Tareas
+
+| Tarea | Fecha | Estado | Dónde |
+| --- | --- | --- | --- |
+| 4.1 Notebook de validación dejando una campaña afuera | 15/11 | Hecho | `modelo.validar`, sección 2 del notebook |
+| 4.2 Líneas base: promedio histórico y tendencia lineal | 15/11 | Hecho | `modelo.promedio_historico`, `modelo.tendencia_lineal` |
+| 4.3 Primer XGBoost sobre la tabla maestra v1 | 22/11 | Hecho | `modelo.xgboost_sobre_tendencia` |
+| 4.4 Métricas (MAE, % de error, R²) por cultivo contra las líneas base | 22/11 | Hecho | `modelo.metricas`, `metricas_modelos.csv` |
+
+En Santa Fe, el XGBoost tiene entre 14 y 25 % menos error que la mejor línea base, tanto dejando una
+campaña afuera como entrenando solo con el pasado. Resultados y decisiones en
+[`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 
 ## Estructura
 
 ```
-src/          pipeline de datos y modelo (se corre en orden)
-  config.py             rutas, regiones candidatas, meses de la campaña
-  01_descargas.py       límites IGN, rinde MAGyP, ONI de NOAA
-  02_rinde_enso.py      rinde limpio por departamento, fase ENSO por campaña, comparación de regiones
-  03_clima.py           lluvia CHIRPS (por polígono) + temperatura y humedad del suelo (NASA POWER)
-  04_modis.py           NDVI de MODIS en tierras de cultivo, por departamento (Planetary Computer)
-  05_tabla_maestra.py   une todo: una fila por departamento × campaña × cultivo
-  06_exploracion.py     figuras del análisis histórico
-  modelo.py             frente 4: líneas base, validación por campaña, XGBoost, métricas
-notebooks/
-  01_ndvi_modis_departamento.ipynb               NDVI de un departamento y una campaña (tarea 3.1)
-  02_frente4_validacion_lineas_base_xgboost.ipynb  tareas 4.1 a 4.4
-tests/        pruebas del módulo del modelo con datos sintéticos (uv run pytest tests)
-docs/         fuentes de datos, diccionario de la tabla maestra, región piloto, notas del modelo
-data/raw/        descargas originales (no se versiona)
-data/processed/  tablas generadas; por región en data/processed/<region>/
-outputs/figures/ figuras por región
-web/          demo web (semana 5)
+src/modelo.py              líneas base, validación por campaña, XGBoost y métricas
+notebooks/frente4_validacion_lineas_base_xgboost.ipynb   tareas 4.1 a 4.4 con resultados
+tests/test_modelo.py       pruebas con datos sintéticos (incluye la regla de oro)
+docs/frente4_modelo.md     método, decisiones, resultados y próximos pasos
+data/processed/santa_fe/
+  tabla_maestra.csv        entrada del modelo (provisoria, ver abajo)
+  predicciones_loco.csv, predicciones_temporal.csv, metricas_modelos.csv   salidas
 ```
 
 ## Cómo correrlo
 
-Requiere [uv](https://docs.astral.sh/uv/). No hace falta ninguna cuenta: todas las fuentes del v1 son
-abiertas.
+Requiere [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-export AGRO_REGION=santa_fe          # o norte_ba_sur_sf, entre_rios
-
-uv run python src/01_descargas.py    # ~1 min
-uv run python src/02_rinde_enso.py   # segundos
-uv run python src/03_clima.py        # ~5 min
-uv run python src/04_modis.py        # ~30 min la primera vez (2000-hoy); después solo el año en curso
-uv run python src/05_tabla_maestra.py
-uv run python src/06_exploracion.py
-uv run python src/modelo.py          # métricas de líneas base y XGBoost
+uv run python src/modelo.py              # predicciones y métricas en data/processed/santa_fe/
+uv run --with jupyterlab jupyter lab     # para abrir el notebook
+uv run pytest tests
 ```
 
-Para abrir los notebooks: `uv run --with jupyterlab jupyter lab`. Las pruebas del modelo:
-`uv run pytest tests`.
+Para otra región: dejar su tabla en `data/processed/<region>/tabla_maestra.csv` y correr con
+`AGRO_REGION=<region>`.
 
-Si solo vas a trabajar en el modelo, alcanza con `data/processed/<region>/tabla_maestra.csv` y
-`src/modelo.py`. El diccionario de columnas está en [`docs/tabla_maestra.md`](docs/tabla_maestra.md).
+## Entrada
 
-## Estado (7/11/2026)
+El modelo lee la tabla maestra con el formato del plan: una fila por departamento × campaña × cultivo.
+Las columnas que usa están en [`docs/frente4_modelo.md`](docs/frente4_modelo.md#entrada-la-tabla-maestra).
 
-| Tarea | Estado |
-| --- | --- |
-| 1.1-1.3 Rinde por departamento, limpieza, cobertura y región | Hecho para las tres candidatas. **El MAGyP tiene datos hasta 2024/25**, no hasta 2019 |
-| 1.4 Tabla maestra v1 | Hecha para Santa Fe (`tabla_maestra.csv`) |
-| 2.1 ONI y fase por campaña | Hecho (`data/processed/enso_campanas.csv`) |
-| 2.2 Lluvia mensual | Hecho con CHIRPS v3 |
-| 2.3 Temperatura y humedad del suelo | Provisorio con NASA POWER; falta ERA5-Land |
-| 3.1 Notebook NDVI de un departamento | Hecho (Planetary Computer, con el equivalente en Earth Engine) |
-| 3.2 Máscara de soja y maíz | Pendiente: hoy se usa "cultivo" de ESA WorldCover para los dos |
-| 3.3 NDVI mensual de todos los departamentos | Hecho para Santa Fe |
-| 4.1-4.4 Validación, líneas base, XGBoost, métricas | Primera versión en `src/modelo.py` y el notebook 02. El XGBoost tiene entre 14 y 25 % menos error que la mejor línea base ([resultados](docs/frente4_modelo.md)) |
+La tabla que está en el repo es una **versión provisoria de Santa Fe** para poder avanzar con el frente 4.
+Cuando el equipo tenga la tabla maestra v1, se reemplaza el archivo y se vuelve a correr todo.
 
-## Qué es de otros y qué aportamos
-
-Los datos son de terceros: MAGyP (rinde), NOAA (ONI), IGN (límites), NASA (MODIS, POWER),
-ESA (WorldCover), Climate Hazards Center (CHIRPS) y Microsoft Planetary Computer (acceso a MODIS y
-WorldCover). Licencias en [`docs/fuentes_de_datos.md`](docs/fuentes_de_datos.md). El aporte del
-proyecto es el procesamiento por departamento, la tabla maestra, los modelos y su validación por
-campaña y por fase ENSO.
+Esa tabla usa datos de terceros: rinde del MAGyP (CC BY 4.0), ONI de NOAA, NDVI de MODIS (NASA), máscara
+de cultivo de ESA WorldCover, lluvia de CHIRPS (Climate Hazards Center) y temperatura y humedad del suelo
+de NASA POWER.

@@ -8,18 +8,10 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "earthengine-api>=1.7.51",
-    "geopandas>=1.2.0",
     "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
     "pandas>=3.1.1",
-    "planetary-computer>=1.0.0",
-    "pyarrow>=26.0.1",
-    "pyproj>=3.8.0",
-    "pystac-client>=0.9.1",
-    "rasterio>=1.5.2",
-    "requests>=2.34.2",
     "scikit-learn>=1.9.1",
-    "shapely>=2.2.0",
     "xgboost>=3.4.1",
 ]
 

@@ -1,6 +1,6 @@
 # Frente 4 · Modelo de machine learning
 
-Código: `src/modelo.py`. Notebook con resultados: `notebooks/02_frente4_validacion_lineas_base_xgboost.ipynb`.
+Código: `src/modelo.py`. Notebook con resultados: `notebooks/frente4_validacion_lineas_base_xgboost.ipynb`.
 Pruebas: `uv run pytest tests`.
 
 ## Qué hay
@@ -16,6 +16,28 @@ Pruebas: `uv run pytest tests`.
 Un "modelo" es cualquier función `f(train, test) -> np.ndarray` con una predicción por fila de `test`.
 Para probar otro algoritmo (Random Forest, regresión lineal, LSTM), alcanza con escribir esa función y
 pasarla en el diccionario de `validar`. Las métricas y la comparación salen igual.
+
+## Entrada: la tabla maestra
+
+`data/processed/<region>/tabla_maestra.csv`, una fila por departamento × campaña × cultivo. El modelo usa
+estas columnas:
+
+| Columna | Contenido |
+| --- | --- |
+| `depto_id` | Código INDEC del departamento. Se lee como texto para no perder el 0 inicial |
+| `departamento` | Nombre, solo para mostrar |
+| `campania`, `anio_siembra` | `2015/16` y `2015`. La campaña es el grupo de la validación; el año ordena la tendencia |
+| `cultivo` | `soja` o `maiz`. Se entrena un modelo por cultivo |
+| `fase_enso`, `oni`, `nino_fuerte` | Fase de la campaña (`nino`, `nina`, `neutro`), ONI promedio y si es ≥ 1,5 |
+| `ndvi_mes_N`, `lluvia_mes_N`, `temp_mes_N`, `humedad_suelo_mes_N` | N = 1 a 8, de septiembre (1) a abril (8) |
+| `rinde_real` | kg/ha. Vacío en las campañas que hay que predecir |
+
+Las celdas vacías en las variables mensuales no rompen nada: el XGBoost las maneja y las líneas base no
+las usan. Si cambian los nombres o los meses en la v1 del equipo, alcanza con ajustar
+`VARIABLES_MENSUALES` y `MESES_CORTE` en `modelo.py`.
+
+La tabla provisoria de Santa Fe tiene NDVI de MODIS promediado en tierras de cultivo (ESA WorldCover),
+lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del MAGyP.
 
 ## Decisiones
 
@@ -83,4 +105,4 @@ Computer no tiene esos compuestos.
 - Variables derivadas: NDVI máximo, integral de NDVI dic-mar, lluvia acumulada, días de calor.
 - Probar sin el ONI, para medir cuánto aporta el satélite solo.
 - Rinde ponderado por superficie en las métricas regionales (hoy cada departamento pesa igual).
-- Repetir con `AGRO_REGION=norte_ba_sur_sf` para ver si los resultados se sostienen en otra región.
+- Repetir con la tabla de otra región para ver si los resultados se sostienen.
