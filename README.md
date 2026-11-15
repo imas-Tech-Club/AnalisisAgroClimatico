@@ -13,8 +13,10 @@ se equivoca, en especial en años Niño. Entrega final: 20/12/2026.
 | 4.3 Primer XGBoost sobre la tabla maestra v1 | 22/11 | Hecho | `modelo.xgboost_sobre_tendencia` |
 | 4.4 Métricas (MAE, % de error, R²) por cultivo contra las líneas base | 22/11 | Hecho | `modelo.metricas`, `metricas_modelos.csv` |
 
-En Santa Fe, el XGBoost tiene entre 14 y 25 % menos error que la mejor línea base, tanto dejando una
-campaña afuera como entrenando solo con el pasado. Resultados y decisiones en
+En Santa Fe (2000/01 a 2025/26), el XGBoost tiene entre 10 y 26 % menos error que la mejor línea base,
+tanto dejando una campaña afuera como entrenando solo con el pasado. En la primera validación en vivo
+(la campaña 2025/26, predicha antes de que el MAGyP publicara el rinde) perdió contra la tendencia lineal,
+sobre todo en maíz, por el peso del ONI. Resultados y decisiones en
 [`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 
 ## Estructura
@@ -27,6 +29,10 @@ docs/frente4_modelo.md     método, decisiones, resultados y próximos pasos
 data/processed/santa_fe/
   tabla_maestra.csv        entrada del modelo (provisoria, ver abajo)
   predicciones_loco.csv, predicciones_temporal.csv, metricas_modelos.csv   salidas
+
+Frente 1 (datos de rinde, ver docs/frente1_cobertura.md):
+data/raw/                  extractos del MAGyP sin modificar
+src/rinde_limpio.py        rinde limpio con código INDEC -> data/processed/<region>/rinde_limpio_<region>.csv
 ```
 
 ## Cómo correrlo

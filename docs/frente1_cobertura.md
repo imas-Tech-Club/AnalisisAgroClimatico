@@ -42,7 +42,8 @@ departamentos bonaerenses incluir (la provincia tiene 103) y esa lista no está 
 - Rinde medio 2000/01 a 2024/25: soja 2710 kg/ha, maíz 6584 kg/ha.
 - **Maíz 2008/09:** 9 de Julio, Garay, General Obligado, San Javier y Vera figuran con superficie sembrada pero
   superficie cosechada = 0 y rinde = 0. Es pérdida total reportada (campaña de sequía), no un dato faltante.
-  La tabla maestra provisoria los deja vacíos. **Decisión pendiente:** tratarlos como 0 o excluirlos.
+  La tabla maestra provisoria los deja vacíos. **Decisión (frente 4, 14/11):** se excluyen del modelo; ver
+  `docs/frente4_modelo.md`.
 - 2025/26: rinde publicado para los 19 departamentos en soja y en maíz.
 - Los 945 valores de rinde de la tabla maestra provisoria coinciden con el MAGyP.
 
@@ -66,7 +67,12 @@ departamentos bonaerenses incluir (la provincia tiene 103) y esa lista no está 
 ## Decisiones y pendientes
 
 - [ ] Confirmar región: Santa Fe, o Santa Fe + Entre Ríos.
-- [ ] Tratamiento del maíz 2008/09 de los cinco departamentos con pérdida total.
-- [ ] Confirmar con Juan si su pipeline de NDVI y clima corre para los 16 departamentos de Entre Ríos.
+- [x] Tratamiento del maíz 2008/09 de los cinco departamentos con pérdida total. Respuesta del frente 4:
+  se excluyen del entrenamiento y de las métricas. Con cosechada = 0, el rinde por hectárea cosechada no
+  está definido (detalle en `docs/frente4_modelo.md`, sección Decisiones).
+- [x] Confirmar con Juan si su pipeline de NDVI y clima corre para los 16 departamentos de Entre Ríos.
+  Respuesta: está preparado (`AGRO_REGION=entre_rios`, polígonos del IGN con los mismos códigos que
+  `cruce_departamentos.csv`), pero todavía no se corrió. El código está en el commit `517f766`; detalle en
+  `docs/frente4_modelo.md`, sección Entre Ríos.
 - [x] Códigos INDEC de Entre Ríos (cruce hecho, tarea 1.2).
 - [ ] Verificar la licencia del dataset (el README del frente 4 cita CC BY 4.0; el portal no la muestra).

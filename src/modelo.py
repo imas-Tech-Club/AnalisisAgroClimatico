@@ -50,7 +50,11 @@ def cargar_tabla(region: str = REGION) -> pd.DataFrame:
 
 
 def entrenables(df: pd.DataFrame) -> pd.DataFrame:
-    """Filas con rinde publicado (las de 2025/26 y 2026/27 quedan para predecir)."""
+    """Filas con rinde publicado (la campaña en curso, 2026/27, queda para predecir).
+
+    El maíz 2008/09 de cinco departamentos con pérdida total (cosechada = 0) también queda afuera:
+    el rinde es producción / superficie cosechada y con cosechada 0 no está definido.
+    """
     return df[df[OBJETIVO].notna()].copy()
 
 

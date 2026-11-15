@@ -37,7 +37,23 @@ las usan. Si cambian los nombres o los meses en la v1 del equipo, alcanza con aj
 `VARIABLES_MENSUALES` y `MESES_CORTE` en `modelo.py`.
 
 La tabla provisoria de Santa Fe tiene NDVI de MODIS promediado en tierras de cultivo (ESA WorldCover),
-lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del MAGyP.
+lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del MAGyP. El rinde de 2025/26
+se cargó el 14/11/2026 desde `data/processed/santa_fe/rinde_limpio_santa_fe.csv` (frente 1, MAGyP
+actualizado el 30/10/2026). Ese archivo coincide con la tabla en las 945 filas que ya tenían rinde.
+
+### Entre Ríos
+
+El modelo corre sin cambios con `AGRO_REGION=entre_rios` en cuanto exista
+`data/processed/entre_rios/tabla_maestra.csv`. Lo que falta es el NDVI y el clima de sus departamentos.
+
+El pipeline que armó la tabla provisoria de Santa Fe (`src/01_descargas.py` a `src/05_tabla_maestra.py`)
+ya tiene la región `entre_rios` configurada con los polígonos del IGN, y sus 17 códigos coinciden con
+`data/processed/cruce_departamentos.csv`. Ese código se sacó del repo porque es de los frentes 2 y 3, y
+está en el commit `517f766`. Todavía no se corrió para Entre Ríos. Si se corre:
+
+- El rinde conviene tomarlo de `data/processed/entre_rios/rinde_limpio_entre_rios.csv`: el dataset del
+  MAGyP que baja `01_descargas.py` termina en 2024/25.
+- Islas del Ibicuy queda sin filas para entrenar, porque el MAGyP no tiene rinde de soja ni maíz ahí.
 
 ## Decisiones
 
@@ -47,7 +63,7 @@ lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del M
   2008/09) y simula el uso real. `loco` favorece a la tendencia lineal porque le deja interpolar con
   campañas futuras: un modelo tiene que ganar en los dos esquemas.
 - **El XGBoost predice el desvío, no el rinde.** Cada departamento tiene su nivel y su tendencia por
-  tecnología, y con 25 campañas eso lo resuelve mejor una recta que un árbol. El XGBoost aprende lo que
+  tecnología, y con 26 campañas eso lo resuelve mejor una recta que un árbol. El XGBoost aprende lo que
   la base no explica (el año climático) y la predicción es base + desvío. Un modelo por cultivo.
 - **Variables v1:** NDVI, lluvia, temperatura y humedad del suelo de septiembre a abril (32 columnas)
   más el ONI. Sin identificador de departamento, porque eso ya entra por la base.
@@ -56,53 +72,100 @@ lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del M
   resultados: para buscarlos hace falta validación anidada.
 - **Métricas:** MAE en kg/ha, error porcentual absoluto medio, R² y sesgo (error medio con signo:
   positivo = sobreestima). `mejora_vs_base_pct` compara el MAE contra la tendencia lineal.
+- **Maíz 2008/09 con pérdida total.** 9 de Julio, Garay, General Obligado, San Javier y Vera tienen
+  superficie sembrada pero cosechada = 0 y rinde = 0 en el MAGyP. Quedan afuera del entrenamiento y de
+  las métricas: el rinde es producción / superficie cosechada, y con cosechada 0 no está definido.
+  Cargarlos como 0 mezclaría cuánto rinde lo que se cosecha con cuánto se pierde. Si más adelante se
+  quieren predecir pérdidas, el objetivo es otro: producción / superficie sembrada, que ahí sí vale 0.
+- **Rinde 2025/26 preliminar.** Puede ser una estimación que el MAGyP revise. Si cambia, se actualiza
+  la tabla y se vuelve a correr.
 
-## Resultados v1 (Santa Fe, 7/11/2026)
+## Resultados (Santa Fe, 14/11/2026)
 
-19 departamentos, campañas 2000/01 a 2024/25: 475 filas de soja y 470 de maíz. Variables de septiembre
-a abril. Tabla completa en `data/processed/santa_fe/metricas_modelos.csv`.
+19 departamentos, campañas 2000/01 a 2025/26: 494 filas de soja y 489 de maíz. Variables de septiembre
+a abril. Tabla completa en `data/processed/santa_fe/metricas_modelos.csv`. La primera versión (7/11, sin
+2025/26) queda en el historial de git. Las conclusiones generales se mantienen; la ventaja en maíz con
+validación temporal se achicó por la campaña 2025/26 (ver la sección siguiente).
 
 **Error medio absoluto (kg/ha) y error porcentual**
 
 | Modelo | Soja · loco | Soja · temporal | Maíz · loco | Maíz · temporal |
 | --- | --- | --- | --- | --- |
-| Promedio histórico | 500 (25,5 %) | 596 (30,0 %) | 1180 (24,1 %) | 1270 (26,1 %) |
-| Tendencia lineal | 506 (26,1 %) | 638 (33,1 %) | 1210 (24,9 %) | 1392 (30,2 %) |
-| **XGBoost sobre la tendencia** | **375 (17,3 %)** | **487 (24,3 %)** | **976 (19,4 %)** | **1096 (21,9 %)** |
-| XGBoost sobre el promedio | 378 (17,1 %) | 476 (23,0 %) | 974 (19,5 %) | 1200 (22,6 %) |
+| Promedio histórico | 493 (25,0 %) | 584 (29,0 %) | 1182 (23,9 %) | 1273 (25,6 %) |
+| Tendencia lineal | 491 (25,2 %) | 616 (31,7 %) | 1195 (24,4 %) | 1382 (29,3 %) |
+| **XGBoost sobre la tendencia** | **363 (16,7 %)** | **476 (23,4 %)** | **950 (18,6 %)** | **1144 (22,1 %)** |
+| XGBoost sobre el promedio | 376 (16,9 %) | 479 (22,7 %) | 995 (19,4 %) | 1253 (22,9 %) |
 
-R² del XGBoost (loco): 0,65 en soja y 0,70 en maíz, contra 0,40 y 0,53 del promedio histórico.
+R² del XGBoost (loco): 0,67 en soja y 0,69 en maíz, contra 0,41 y 0,53 del promedio histórico.
 
 **Lo que dicen estos números**
 
-1. **El XGBoost supera a las dos líneas base en los dos esquemas.** Tiene entre 14 y 25 % menos error
-   que la mejor base (el promedio histórico) y entre 19 y 26 % menos que la tendencia lineal. La mejora
-   se sostiene en la validación temporal, que es la que simula el uso real.
-2. **El promedio histórico le gana a la tendencia lineal** en Santa Fe. El rinde medio casi no tiene
-   tendencia en 2000-2024 (+10 kg/ha por año en soja y en maíz, menos de 0,4 % anual), y la recta por
-   departamento se deja arrastrar por los años extremos (2008/09, 2022/23).
-3. **Las bases se equivocan con sesgo según la fase.** Sobreestiman en años Niña (+1094 kg/ha en
-   maíz) y subestiman en años Niño (−894 kg/ha). El XGBoost reduce ese sesgo a +346 y −145.
+1. **El XGBoost supera a las dos líneas base en los dos esquemas.** Tiene entre 10 y 26 % menos error
+   que la mejor base y entre 17 y 26 % menos que la tendencia lineal. La ventaja más chica es en maíz con
+   validación temporal (10 % sobre el promedio histórico; era 14 % sin 2025/26).
+2. **La tendencia lineal no le gana al promedio histórico** en Santa Fe: empatan en `loco` y el promedio
+   gana claro en `temporal`. El rinde medio casi no tiene tendencia en 2000-2025 (+11 kg/ha por año en
+   soja y +19 en maíz, menos de 0,5 % anual), y la recta por departamento se deja arrastrar por los años
+   extremos (2008/09, 2022/23).
+3. **Las bases se equivocan con sesgo según la fase.** El promedio histórico sobreestima en años Niña
+   (+927 kg/ha en maíz) y subestima en años Niño (−846). El XGBoost reduce ese sesgo a +159 y −127.
 4. **Subpregunta 2, primera respuesta:** el modelo **no** se equivoca más en años Niño. Error en soja:
-   13,7 % en Niño, 11,6 % en neutro y **23,9 % en Niña**. El año difícil es el seco, no el lluvioso.
+   13,5 % en Niño, 11,0 % en neutro y **22,4 % en Niña**. El año difícil es el seco, no el lluvioso.
    Con 9 campañas Niño (2 fuertes) hay que tomarlo con cuidado.
-5. **Subpregunta 1, cómo baja el error en la campaña.** En soja baja de 477 kg/ha (21 %) prediciendo
-   en diciembre a 368 kg/ha (17 %) en marzo. **En maíz casi no baja** (986 → 976): el NDVI de la
+5. **Subpregunta 1, cómo baja el error en la campaña.** En soja baja de 456 kg/ha (20 %) prediciendo
+   en diciembre a 355 kg/ha (16 %) en marzo. **En maíz casi no baja** (970 → 950): el NDVI de la
    máscara genérica de cultivo refleja sobre todo a la soja, que ocupa más superficie. La máscara
    propia de maíz (tarea 3.2) es lo que más puede mejorar este cultivo.
-6. **El ONI es la variable más importante en maíz** (28 % de la ganancia) y **empata con el NDVI de
-   diciembre en soja** (13 % cada una). Les siguen la lluvia y la temperatura de diciembre y la humedad
-   del suelo de febrero.
+6. **El ONI es la variable más importante en los dos cultivos** (25 % de la ganancia en maíz y 12 % en
+   soja). En soja le siguen la lluvia y el NDVI de diciembre y la humedad del suelo de febrero; en maíz,
+   la temperatura de diciembre y de marzo y la lluvia de diciembre.
 
-**Predicción 2025/26.** El notebook deja la estimación por departamento de la campaña 2025/26, que el
-MAGyP todavía no publicó por departamento. Al compararla con el próximo CSV del MAGyP queda la primera
-validación en vivo. A esa campaña le falta el NDVI de septiembre y octubre de 2025, porque Planetary
-Computer no tiene esos compuestos.
+## Validación en vivo: campaña 2025/26
+
+El 7/11/2026 el notebook dejó registrada la predicción de 2025/26 por departamento, entrenada con
+2000/01 a 2024/25. La tabla no tenía el rinde de esa campaña: el dataset del MAGyP que usaba el
+pipeline terminaba en 2024/25. El rinde real llegó el 14/11 con el frente 1. La predicción registrada es
+el pliegue 2025/26 del esquema `temporal`, y se verificó que coincide departamento por departamento.
+Detalle en la sección 8 del notebook.
+
+2025/26 fue Niña débil (ONI −0,54) con muy buena cosecha: maíz 7700 kg/ha de media, el segundo mejor
+año desde 2000 (después de 2009/10), y soja 2961 kg/ha, arriba del promedio de 2720.
+
+| 2025/26 · 19 departamentos | Maíz | Soja |
+| --- | --- | --- |
+| Promedio histórico | 1319 (16,8 %) | 374 (12,0 %) |
+| Tendencia lineal | **1213 (15,2 %)** | **235 (7,9 %)** |
+| XGBoost sobre la tendencia | 1948 (24,9 %) | 286 (9,3 %) |
+| XGBoost sobre el promedio | 2142 (27,6 %) | 531 (17,3 %) |
+
+**En la primera prueba real, el XGBoost perdió contra la tendencia lineal en los dos cultivos.** En maíz
+subestimó 18 de los 19 departamentos, por 1915 kg/ha en promedio.
+
+**Causa probable: el ONI.** 9 de las 10 Niñas anteriores dieron maíz por debajo del promedio, y el ONI es
+la variable que más pesa: el modelo bajó la predicción por ser Niña. El mismo XGBoost sin el ONI:
+
+| Error del XGBoost | Con ONI | Sin ONI |
+| --- | --- | --- |
+| Maíz · 2025/26 en vivo | 24,9 % | 17,1 % |
+| Maíz · loco, todas las campañas | 18,6 % | 21,0 % |
+| Maíz · temporal, todas las campañas | 22,1 % | 23,0 % |
+| Soja · 2025/26 en vivo | 9,3 % | 6,9 % |
+| Soja · loco, todas las campañas | 16,7 % | 16,7 % |
+| Soja · temporal, todas las campañas | 23,4 % | 23,1 % |
+
+En soja el ONI no aporta en la historia y en 2025/26 restó. En maíz ayuda en la historia y falló fuerte
+en vivo. Es un diagnóstico hecho mirando el resultado de un solo año, así que el modelo no se cambia
+todavía: lo que hay que revisar es cómo entra el ONI. Para 2026/27, un Niño muy fuerte, el riesgo es el
+mismo en espejo: que la fase empuje la predicción más de lo que muestran el NDVI y el clima del año.
 
 ## Próximos pasos sugeridos
 
+- **Revisar cómo entra el ONI.** Probar sin el ONI en soja, donde no aporta. En maíz, probar alternativas
+  (solo la intensidad, o que la fase entre a través del NDVI y el clima observados). Medir siempre en
+  `temporal` y contra la validación en vivo, no solo en `loco`.
+- **Predicción 2026/27** con el corte de diciembre, cuando la tabla tenga los datos de diciembre de 2026.
+  Hoy solo tiene septiembre y parte de octubre.
 - Hiperparámetros con validación anidada (búsqueda dentro de cada pliegue de entrenamiento).
 - Variables derivadas: NDVI máximo, integral de NDVI dic-mar, lluvia acumulada, días de calor.
-- Probar sin el ONI, para medir cuánto aporta el satélite solo.
 - Rinde ponderado por superficie en las métricas regionales (hoy cada departamento pesa igual).
-- Repetir con la tabla de otra región para ver si los resultados se sostienen.
+- Repetir con la tabla de Entre Ríos para ver si los resultados se sostienen (ver arriba qué falta).
