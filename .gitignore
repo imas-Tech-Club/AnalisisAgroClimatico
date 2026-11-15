@@ -4,7 +4,9 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Datos: se versionan solo la tabla maestra y los resultados del modelo.
-data/raw/
+data/raw/*
+!data/raw/magyp_*.csv
+!data/raw/README.md
 data/processed/*/modis/
 data/processed/*/*.npy
 data/processed/*/*.log
