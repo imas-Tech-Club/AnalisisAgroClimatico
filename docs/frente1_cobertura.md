@@ -71,8 +71,8 @@ departamentos bonaerenses incluir (la provincia tiene 103) y esa lista no está 
   se excluyen del entrenamiento y de las métricas. Con cosechada = 0, el rinde por hectárea cosechada no
   está definido (detalle en `docs/frente4_modelo.md`, sección Decisiones).
 - [x] Confirmar con Juan si su pipeline de NDVI y clima corre para los 16 departamentos de Entre Ríos.
-  Respuesta: está preparado (`AGRO_REGION=entre_rios`, polígonos del IGN con los mismos códigos que
-  `cruce_departamentos.csv`), pero todavía no se corrió. El código está en el commit `517f766`; detalle en
-  `docs/frente4_modelo.md`, sección Entre Ríos.
+  Respuesta: sí. La tabla maestra de Entre Ríos quedó en `data/processed/entre_rios/tabla_maestra.csv`
+  (15/11/2026), armada con este rinde limpio. Cómo se genera y cómo sumar provincias, en
+  `docs/tabla_maestra.md`; resultados del modelo, en `docs/frente4_modelo.md`.
 - [x] Códigos INDEC de Entre Ríos (cruce hecho, tarea 1.2).
 - [ ] Verificar la licencia del dataset (el README del frente 4 cita CC BY 4.0; el portal no la muestra).

@@ -10,4 +10,9 @@ data/raw/*
 data/processed/*/modis/
 data/processed/*/*.npy
 data/processed/*/*.log
+# Intermedios del pipeline de la tabla maestra (se regeneran con src/02 a 05)
+data/processed/enso_campanas.csv
+data/processed/*/chirps_mensual.csv
+data/processed/*/clima_mensual_departamento.csv
+data/processed/*/ndvi_mensual_departamento.csv
 .pytest_cache/

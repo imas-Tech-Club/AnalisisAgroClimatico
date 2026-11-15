@@ -16,7 +16,8 @@ se equivoca, en especial en años Niño. Entrega final: 20/12/2026.
 En Santa Fe (2000/01 a 2025/26), el XGBoost tiene entre 10 y 26 % menos error que la mejor línea base,
 tanto dejando una campaña afuera como entrenando solo con el pasado. En la primera validación en vivo
 (la campaña 2025/26, predicha antes de que el MAGyP publicara el rinde) perdió contra la tendencia lineal,
-sobre todo en maíz, por el peso del ONI. Resultados y decisiones en
+sobre todo en maíz, por el peso del ONI. En Entre Ríos el XGBoost también les gana a las líneas base en
+la historia y también pierde en 2025/26 por el ONI. Resultados y decisiones en
 [`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 
 ## Estructura
@@ -26,9 +27,12 @@ src/modelo.py              líneas base, validación por campaña, XGBoost y mé
 notebooks/frente4_validacion_lineas_base_xgboost.ipynb   tareas 4.1 a 4.4 con resultados
 tests/test_modelo.py       pruebas con datos sintéticos (incluye la regla de oro)
 docs/frente4_modelo.md     método, decisiones, resultados y próximos pasos
-data/processed/santa_fe/
-  tabla_maestra.csv        entrada del modelo (provisoria, ver abajo)
+data/processed/<region>/   santa_fe y entre_rios
+  tabla_maestra.csv        entrada del modelo
   predicciones_loco.csv, predicciones_temporal.csv, metricas_modelos.csv   salidas
+
+Tabla maestra (ver docs/tabla_maestra.md):
+src/config.py, src/01_descargas.py ... src/05_tabla_maestra.py   ENSO, clima, NDVI y armado de la tabla
 
 Frente 1 (datos de rinde, ver docs/frente1_cobertura.md):
 data/raw/                  extractos del MAGyP sin modificar
@@ -54,8 +58,9 @@ Para otra región: dejar su tabla en `data/processed/<region>/tabla_maestra.csv`
 El modelo lee la tabla maestra con el formato del plan: una fila por departamento × campaña × cultivo.
 Las columnas que usa están en [`docs/frente4_modelo.md`](docs/frente4_modelo.md#entrada-la-tabla-maestra).
 
-La tabla que está en el repo es una **versión provisoria de Santa Fe** para poder avanzar con el frente 4.
-Cuando el equipo tenga la tabla maestra v1, se reemplaza el archivo y se vuelve a correr todo.
+Hay tablas de **Santa Fe y Entre Ríos**. Se generan con el pipeline de `src/01_descargas.py` a
+`src/05_tabla_maestra.py`, que toma el rinde del frente 1; los comandos y cómo sumar otra provincia
+están en [`docs/tabla_maestra.md`](docs/tabla_maestra.md).
 
 Esa tabla usa datos de terceros: rinde del MAGyP (CC BY 4.0), ONI de NOAA, NDVI de MODIS (NASA), máscara
 de cultivo de ESA WorldCover, lluvia de CHIRPS (Climate Hazards Center) y temperatura y humedad del suelo

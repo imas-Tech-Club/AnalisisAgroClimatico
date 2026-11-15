@@ -41,19 +41,9 @@ lluvia de CHIRPS v3, temperatura y humedad del suelo de NASA POWER y rinde del M
 se cargó el 14/11/2026 desde `data/processed/santa_fe/rinde_limpio_santa_fe.csv` (frente 1, MAGyP
 actualizado el 30/10/2026). Ese archivo coincide con la tabla en las 945 filas que ya tenían rinde.
 
-### Entre Ríos
-
-El modelo corre sin cambios con `AGRO_REGION=entre_rios` en cuanto exista
-`data/processed/entre_rios/tabla_maestra.csv`. Lo que falta es el NDVI y el clima de sus departamentos.
-
-El pipeline que armó la tabla provisoria de Santa Fe (`src/01_descargas.py` a `src/05_tabla_maestra.py`)
-ya tiene la región `entre_rios` configurada con los polígonos del IGN, y sus 17 códigos coinciden con
-`data/processed/cruce_departamentos.csv`. Ese código se sacó del repo porque es de los frentes 2 y 3, y
-está en el commit `517f766`. Todavía no se corrió para Entre Ríos. Si se corre:
-
-- El rinde conviene tomarlo de `data/processed/entre_rios/rinde_limpio_entre_rios.csv`: el dataset del
-  MAGyP que baja `01_descargas.py` termina en 2024/25.
-- Islas del Ibicuy queda sin filas para entrenar, porque el MAGyP no tiene rinde de soja ni maíz ahí.
+Desde el 15/11/2026 también hay tabla de **Entre Ríos** (`AGRO_REGION=entre_rios`), con las mismas
+fuentes. Las dos tablas se generan con `src/01_descargas.py` a `src/05_tabla_maestra.py`, que toman el
+rinde del frente 1; detalle en [`docs/tabla_maestra.md`](tabla_maestra.md).
 
 ## Decisiones
 
@@ -158,14 +148,57 @@ en vivo. Es un diagnóstico hecho mirando el resultado de un solo año, así que
 todavía: lo que hay que revisar es cómo entra el ONI. Para 2026/27, un Niño muy fuerte, el riesgo es el
 mismo en espejo: que la fase empuje la predicción más de lo que muestran el NDVI y el clima del año.
 
+**Descartado: el hueco de NDVI.** A 2025/26 le falta el NDVI de septiembre y octubre, y en el
+entrenamiento ese dato nunca falta, así que el árbol podría mandar los vacíos por la rama equivocada.
+Entrenando sin esos dos meses, el error en vivo casi no cambia (maíz 24,9 → 23,7 % en Santa Fe y
+20,3 → 21,4 % en Entre Ríos).
+
+## Entre Ríos (15/11/2026)
+
+16 departamentos con rinde (Islas del Ibicuy no tiene rinde ni NDVI: es delta y WorldCover no marca
+cultivo), campañas 2000/01 a 2025/26: 413 filas de soja y 413 de maíz. San Salvador empieza en 2003/04.
+No hay pérdidas totales en la ventana. Tabla completa en `data/processed/entre_rios/metricas_modelos.csv`.
+
+| Modelo | Soja · loco | Soja · temporal | Maíz · loco | Maíz · temporal |
+| --- | --- | --- | --- | --- |
+| Promedio histórico | 426 (26,3 %) | 469 (31,6 %) | 1199 (27,7 %) | 1294 (32,1 %) |
+| Tendencia lineal | 441 (27,0 %) | 560 (34,5 %) | 1233 (28,5 %) | 1433 (34,9 %) |
+| XGBoost sobre la tendencia | 320 (18,8 %) | 462 (26,8 %) | 918 (19,5 %) | 1107 (24,5 %) |
+| **XGBoost sobre el promedio** | **303 (18,0 %)** | **375 (23,3 %)** | **882 (18,8 %)** | **1001 (22,9 %)** |
+
+1. **El XGBoost vuelve a ganarles a las dos líneas base en los dos esquemas**, así que el resultado de
+   Santa Fe se sostiene en otra provincia.
+2. **Pero acá conviene la otra base.** En Entre Ríos la tendencia lineal es peor que el promedio, y el
+   XGBoost sobre el promedio tiene entre 20 y 29 % menos error que la mejor línea base. El XGBoost sobre
+   la tendencia, el que se eligió con Santa Fe, casi no le gana al promedio en soja con validación
+   temporal (462 contra 469 kg/ha).
+3. **El ONI no aporta en Entre Ríos**: sin él, el error histórico queda igual en los dos cultivos.
+
+**Validación en vivo 2025/26.** También fue un buen año (maíz 6519 kg/ha contra 5734 de media, soja
+2454 contra 2257).
+
+| 2025/26 · 16 departamentos | Maíz | Soja |
+| --- | --- | --- |
+| **Promedio histórico** | **846 (12,7 %)** | **216 (8,7 %)** |
+| Tendencia lineal | 1065 (16,0 %) | 337 (13,6 %) |
+| XGBoost sobre la tendencia | 1338 (20,3 %) | 350 (14,1 %) |
+| XGBoost sobre el promedio | 1145 (17,3 %) | 285 (11,6 %) |
+
+Igual que en Santa Fe, el XGBoost perdió en vivo y subestimó el maíz en los 16 departamentos. Sin el
+ONI el maíz baja a 15,9 %; la soja no cambia. Que pase lo mismo en las dos provincias refuerza que el
+problema es cómo entra el ONI y no un dato suelto de una región.
+
 ## Próximos pasos sugeridos
 
-- **Revisar cómo entra el ONI.** Probar sin el ONI en soja, donde no aporta. En maíz, probar alternativas
-  (solo la intensidad, o que la fase entre a través del NDVI y el clima observados). Medir siempre en
-  `temporal` y contra la validación en vivo, no solo en `loco`.
+- **Revisar cómo entra el ONI.** Falló en vivo en el maíz de las dos provincias. Probar sin el ONI en
+  soja, donde no aporta. En maíz, probar alternativas (solo la intensidad, o que la fase entre a través
+  del NDVI y el clima observados). Medir siempre en `temporal` y contra la validación en vivo, no solo en
+  `loco`.
+- **Elegir la base del XGBoost (tendencia o promedio)** con las dos provincias juntas: en Santa Fe gana
+  sobre la tendencia y en Entre Ríos sobre el promedio. Una opción es entrenar con las dos tablas juntas.
 - **Predicción 2026/27** con el corte de diciembre, cuando la tabla tenga los datos de diciembre de 2026.
   Hoy solo tiene septiembre y parte de octubre.
 - Hiperparámetros con validación anidada (búsqueda dentro de cada pliegue de entrenamiento).
 - Variables derivadas: NDVI máximo, integral de NDVI dic-mar, lluvia acumulada, días de calor.
 - Rinde ponderado por superficie en las métricas regionales (hoy cada departamento pesa igual).
-- Repetir con la tabla de Entre Ríos para ver si los resultados se sostienen (ver arriba qué falta).
+- Sumar más provincias cuando el frente 1 tenga su rinde limpio (cómo, en `docs/tabla_maestra.md`).
