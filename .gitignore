@@ -16,3 +16,4 @@ data/processed/*/chirps_mensual.csv
 data/processed/*/clima_mensual_departamento.csv
 data/processed/*/ndvi_mensual_departamento.csv
 .pytest_cache/
+data/processed/experimento_oni/

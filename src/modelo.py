@@ -95,7 +95,7 @@ def xgboost_sobre_tendencia(features: list[str], base: str = "tendencia", **para
 
     Cada departamento tiene su nivel de rinde (y una tendencia por tecnología); eso ya lo captura
     la línea base. El árbol se concentra en lo que la base no explica: el año climático (NDVI,
-    lluvia, temperatura, humedad del suelo, ONI). Predicción final = base + desvío predicho.
+    lluvia, temperatura, humedad del suelo y, si va en `features`, el ONI). Predicción final = base + desvío.
     `base`: "tendencia" (recta por departamento) o "promedio" (promedio histórico del departamento).
     Un modelo por cultivo.
     """
@@ -177,12 +177,20 @@ def comparar_con_base(m: pd.DataFrame, base: str = "tendencia_lineal") -> pd.Dat
 
 
 def modelos_estandar(hasta_mes: int = 8) -> dict[str, Callable]:
-    feats = columnas_clima_satelite(hasta_mes) + ["oni"]
+    """Líneas base, XGBoost por defecto (sin ONI) y el XGBoost con ONI como escenario de comparación.
+
+    Desde el 16/11/2026 el XGBoost no usa el ONI: en la validación temporal no mejora el error, y en
+    2025/26 (Niña débil con buena cosecha) y en los Niños fuertes empujó la predicción en la dirección
+    equivocada (ver docs/frente4_modelo.md y src/experimento_oni.py). El ENSO sigue entrando por lo que
+    se observa en la campaña: lluvia, humedad del suelo y NDVI.
+    """
+    feats = columnas_clima_satelite(hasta_mes)
     return {
         "promedio_historico": promedio_historico,
         "tendencia_lineal": tendencia_lineal,
         "xgboost": xgboost_sobre_tendencia(feats, base="tendencia"),
         "xgboost_sobre_promedio": xgboost_sobre_tendencia(feats, base="promedio"),
+        "xgboost_con_oni": xgboost_sobre_tendencia(feats + ["oni"], base="tendencia"),
     }
 
 

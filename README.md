@@ -13,17 +13,19 @@ se equivoca, en especial en años Niño. Entrega final: 20/12/2026.
 | 4.3 Primer XGBoost sobre la tabla maestra v1 | 22/11 | Hecho | `modelo.xgboost_sobre_tendencia` |
 | 4.4 Métricas (MAE, % de error, R²) por cultivo contra las líneas base | 22/11 | Hecho | `modelo.metricas`, `metricas_modelos.csv` |
 
-En Santa Fe (2000/01 a 2025/26), el XGBoost tiene entre 10 y 26 % menos error que la mejor línea base,
-tanto dejando una campaña afuera como entrenando solo con el pasado. En la primera validación en vivo
-(la campaña 2025/26, predicha antes de que el MAGyP publicara el rinde) perdió contra la tendencia lineal,
-sobre todo en maíz, por el peso del ONI. En Entre Ríos el XGBoost también les gana a las líneas base en
-la historia y también pierde en 2025/26 por el ONI. Resultados y decisiones en
-[`docs/frente4_modelo.md`](docs/frente4_modelo.md).
+En Santa Fe y Entre Ríos (2000/01 a 2025/26), el XGBoost les gana a las dos líneas base, tanto dejando
+una campaña afuera como entrenando solo con el pasado, aunque en algunos casos por poco (el maíz de Santa
+Fe; la soja de Entre Ríos entrenando solo con el pasado). En la
+primera validación en vivo (la campaña 2025/26, predicha antes de que el MAGyP publicara el rinde) el
+modelo de ese momento perdió contra las líneas base en las dos provincias, sobre todo en maíz, por el peso
+del ONI. Desde el 16/11/2026 el modelo por defecto no usa el ONI; el modelo con ONI queda como escenario.
+Resultados y decisiones en [`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 
 ## Estructura
 
 ```
 src/modelo.py              líneas base, validación por campaña, XGBoost y métricas
+src/experimento_oni.py     experimento de cómo entra el ONI -> data/processed/experimento_oni.csv
 notebooks/frente4_validacion_lineas_base_xgboost.ipynb   tareas 4.1 a 4.4 con resultados
 tests/test_modelo.py       pruebas con datos sintéticos (incluye la regla de oro)
 docs/frente4_modelo.md     método, decisiones, resultados y próximos pasos
