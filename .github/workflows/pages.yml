@@ -1,0 +1,33 @@
+# Publica la demo web (carpeta web/) en GitHub Pages cada vez que cambia en main.
+# Requiere Pages activado con "GitHub Actions" como fuente (Settings > Pages > Build and deployment).
+name: Demo web en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacion.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: publicacion
+        uses: actions/deploy-pages@v4
