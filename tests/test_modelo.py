@@ -56,3 +56,20 @@ def test_xgboost_aprende_la_senal_del_ndvi(tabla):
                                   "xgboost": modelo.xgboost_sobre_tendencia(feats)}, esquema="loco")
     m = modelo.metricas(pred)["mae_kg_ha"]
     assert m[("xgboost", "soja")] < m[("tendencia_lineal", "soja")]
+
+
+def test_predecir_solo_entrena_con_campanias_anteriores(tabla):
+    t = tabla.copy()
+    t.loc[t.anio_siembra == 2019, "rinde_real"] = np.nan  # la campaña "en curso"
+    t.loc[t.anio_siembra == 2015, "rinde_real"] = np.nan  # un hueco en el medio no rompe nada
+    vistos = []
+
+    def espia(train, test):
+        vistos.append((set(train.campania), train.anio_siembra.max()))
+        return np.zeros(len(test))
+
+    p = modelo.predecir(t, "2019/20", {"espia": espia}, hasta_mes=3)
+    campanias, max_anio = vistos[0]
+    assert "2019/20" not in campanias and "2015/16" not in campanias and max_anio == 2018
+    assert len(p) == (t.campania == "2019/20").sum()
+    assert (p["faltan_datos_pct"] == 0).all()

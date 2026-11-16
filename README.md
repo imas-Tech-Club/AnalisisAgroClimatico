@@ -14,11 +14,14 @@ se equivoca, en especial en años Niño. Entrega final: 20/12/2026.
 | 4.4 Métricas (MAE, % de error, R²) por cultivo contra las líneas base | 22/11 | Hecho | `modelo.metricas`, `metricas_modelos.csv` |
 
 En Santa Fe y Entre Ríos (2000/01 a 2025/26), el XGBoost les gana a las dos líneas base, tanto dejando
-una campaña afuera como entrenando solo con el pasado, aunque en algunos casos por poco (el maíz de Santa
-Fe; la soja de Entre Ríos entrenando solo con el pasado). En la
-primera validación en vivo (la campaña 2025/26, predicha antes de que el MAGyP publicara el rinde) el
-modelo de ese momento perdió contra las líneas base en las dos provincias, sobre todo en maíz, por el peso
-del ONI. Desde el 16/11/2026 el modelo por defecto no usa el ONI; el modelo con ONI queda como escenario.
+una campaña afuera como entrenando solo con el pasado: en soja por 18 a 30 %, en maíz de Entre Ríos por
+24 a 28 % y en maíz de Santa Fe solo por 5 a 7 %. En la primera validación en vivo (la campaña 2025/26,
+predicha antes de que el MAGyP publicara el rinde) el modelo de ese momento perdió contra las líneas base
+en las dos provincias, sobre todo en maíz, por el peso del ONI. Desde el 16/11/2026 el modelo por defecto
+aprende sobre el promedio histórico y no usa el ONI. **Con datos solo hasta noviembre, que es lo que habrá
+para la entrega del 20/12, el modelo todavía no le gana al promedio histórico**; empieza a aportar con los
+datos de diciembre (la soja de Entre Ríos, con los de enero).
+
 Resultados y decisiones en [`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 
 ## Estructura
@@ -26,6 +29,7 @@ Resultados y decisiones en [`docs/frente4_modelo.md`](docs/frente4_modelo.md).
 ```
 src/modelo.py              líneas base, validación por campaña, XGBoost y métricas
 src/experimento_oni.py     experimento de cómo entra el ONI -> data/processed/experimento_oni.csv
+src/experimento_base.py    experimento de la base del XGBoost -> data/processed/experimento_base.csv
 notebooks/frente4_validacion_lineas_base_xgboost.ipynb   tareas 4.1 a 4.4 con resultados
 tests/test_modelo.py       pruebas con datos sintéticos (incluye la regla de oro)
 docs/frente4_modelo.md     método, decisiones, resultados y próximos pasos
@@ -48,6 +52,7 @@ Requiere [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync
 uv run python src/modelo.py              # predicciones y métricas en data/processed/santa_fe/
+uv run python src/modelo.py --predecir 2026/27 --corte nov   # predicción de una campaña sin rinde
 uv run --with jupyterlab jupyter lab     # para abrir el notebook
 uv run pytest tests
 ```

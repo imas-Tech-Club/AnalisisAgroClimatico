@@ -33,7 +33,10 @@ warnings.filterwarnings("ignore", category=np.exceptions.RankWarning)
 OBJETIVO = "rinde_real"
 GRUPO = "campania"
 VARIABLES_MENSUALES = ("ndvi", "lluvia", "temp", "humedad_suelo")
-MESES_CORTE = {"dic": 4, "ene": 5, "feb": 6, "mar": 7, "abr": 8}  # hasta qué mes_N hay datos al predecir
+# Hasta qué mes_N hay datos al predecir. "nov" es el corte de la entrega del 20/12/2026: los datos de
+# noviembre están a principios de diciembre, y los de diciembre recién en enero.
+MESES_CORTE = {"nov": 3, "dic": 4, "ene": 5, "feb": 6, "mar": 7, "abr": 8}
+BASE_XGBOOST = "promedio"  # base sobre la que aprende el XGBoost por defecto (src/experimento_base.py)
 
 ROOT = Path(__file__).resolve().parents[1]
 REGION = os.environ.get("AGRO_REGION", "santa_fe")
@@ -166,8 +169,12 @@ def metricas(pred: pd.DataFrame, por=("modelo", "cultivo")) -> pd.DataFrame:
     return pred.groupby(list(por)).apply(calc, include_groups=False).round(3)
 
 
-def comparar_con_base(m: pd.DataFrame, base: str = "tendencia_lineal") -> pd.DataFrame:
-    """Agrega cuánto mejora cada modelo el MAE de la línea base (% positivo = mejor)."""
+def comparar_con_base(m: pd.DataFrame, base: str = "promedio_historico") -> pd.DataFrame:
+    """Agrega cuánto mejora cada modelo el MAE de la línea base (% positivo = mejor).
+
+    Por defecto contra el promedio histórico, que es la línea base más difícil de superar en Santa Fe y
+    Entre Ríos (la tendencia lineal es peor en la validación temporal).
+    """
     m = m.copy()
     ref = m.xs(base, level="modelo")["mae_kg_ha"]
     niveles = [n for n in m.index.names if n != "modelo"]
@@ -177,25 +184,74 @@ def comparar_con_base(m: pd.DataFrame, base: str = "tendencia_lineal") -> pd.Dat
 
 
 def modelos_estandar(hasta_mes: int = 8) -> dict[str, Callable]:
-    """Líneas base, XGBoost por defecto (sin ONI) y el XGBoost con ONI como escenario de comparación.
+    """Líneas base, XGBoost por defecto y dos variantes de comparación.
 
-    Desde el 16/11/2026 el XGBoost no usa el ONI: en la validación temporal no mejora el error, y en
-    2025/26 (Niña débil con buena cosecha) y en los Niños fuertes empujó la predicción en la dirección
-    equivocada (ver docs/frente4_modelo.md y src/experimento_oni.py). El ENSO sigue entrando por lo que
-    se observa en la campaña: lluvia, humedad del suelo y NDVI.
+    Desde el 16/11/2026 el XGBoost por defecto aprende sobre el promedio histórico (src/experimento_base.py)
+    y no usa el ONI: en la validación temporal no mejora el error, y en 2025/26 (Niña débil con buena
+    cosecha) y en los Niños fuertes empujó la predicción en la dirección equivocada (src/experimento_oni.py).
+    El ENSO sigue entrando por lo que se observa en la campaña: lluvia, humedad del suelo y NDVI.
+    `xgboost_sobre_tendencia` y `xgboost_con_oni` quedan para comparar.
     """
     feats = columnas_clima_satelite(hasta_mes)
     return {
         "promedio_historico": promedio_historico,
         "tendencia_lineal": tendencia_lineal,
-        "xgboost": xgboost_sobre_tendencia(feats, base="tendencia"),
-        "xgboost_sobre_promedio": xgboost_sobre_tendencia(feats, base="promedio"),
-        "xgboost_con_oni": xgboost_sobre_tendencia(feats + ["oni"], base="tendencia"),
+        "xgboost": xgboost_sobre_tendencia(feats, base=BASE_XGBOOST),
+        "xgboost_sobre_tendencia": xgboost_sobre_tendencia(feats, base="tendencia"),
+        "xgboost_con_oni": xgboost_sobre_tendencia(feats + ["oni"], base=BASE_XGBOOST),
     }
 
 
+# ------------------------------------------------------------------ predicción de una campaña
+def predecir(df: pd.DataFrame, campania: str, modelos: dict[str, Callable], hasta_mes: int = 8) -> pd.DataFrame:
+    """Predice una campaña (por ejemplo, la campaña en curso) entrenando con todas las anteriores.
+
+    Es lo mismo que el pliegue de esa campaña en la validación `temporal`: solo entra lo publicado antes.
+    `hasta_mes` no filtra nada por sí solo (las columnas las eligen los modelos, ver `modelos_estandar`):
+    se usa para medir cuántos datos del corte le faltan a la campaña y dejarlo en la salida.
+    """
+    test = df[df[GRUPO] == campania]
+    assert len(test), f"no hay filas de la campaña {campania}"
+    anio = int(test["anio_siembra"].iloc[0])
+    train = entrenables(df)
+    train = train[train["anio_siembra"] < anio]
+    assert not set(train[GRUPO]) & set(test[GRUPO]), "regla de oro: campaña en train y test"
+    cols_corte = [c for c in columnas_clima_satelite(hasta_mes) if c in test.columns]
+    faltan = test[cols_corte].isna().mean(axis=1).mul(100).round(1)
+    info = [c for c in ["depto_id", "departamento", "campania", "anio_siembra", "cultivo", "fase_enso", "oni",
+                        "sembrada_ha"] if c in test.columns]
+    salidas = []
+    for nombre, f in modelos.items():
+        out = test[info].copy()
+        out["modelo"], out["pred"] = nombre, f(train, test)
+        out["hasta_mes"], out["faltan_datos_pct"] = hasta_mes, faltan
+        salidas.append(out)
+    return pd.concat(salidas, ignore_index=True)
+
+
 def main():
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Validación de los modelos o predicción de una campaña.")
+    ap.add_argument("--predecir", metavar="CAMPAÑA", help='campaña a predecir, p. ej. "2026/27"')
+    ap.add_argument("--corte", default="abr", choices=list(MESES_CORTE),
+                    help="último mes con datos al predecir (por defecto abr)")
+    a = ap.parse_args()
     df = cargar_tabla()
+
+    if a.predecir:
+        k = MESES_CORTE[a.corte]
+        p = predecir(df, a.predecir, modelos_estandar(k), hasta_mes=k)
+        destino = carpeta() / f"prediccion_{a.predecir.replace('/', '-')}_{a.corte}.csv"
+        p.to_csv(destino, index=False)
+        faltan = p.drop_duplicates(["depto_id", "cultivo"])["faltan_datos_pct"].mean()
+        if faltan > 0:
+            print(f"OJO: a la campaña {a.predecir} le falta el {faltan:.0f} % de los datos hasta {a.corte}. "
+                  "La predicción no vale hasta completar la tabla maestra (src/03 a 05).")
+        resumen = p.pivot_table(index="modelo", columns="cultivo", values="pred").round(0)
+        print(f"{a.predecir}, corte {a.corte}: rinde medio predicho por modelo (kg/ha)\n{resumen}\n-> {destino}")
+        return
+
     tablas = []
     for esquema in ("loco", "temporal"):
         pred = validar(df, modelos_estandar(), esquema)
