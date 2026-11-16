@@ -40,6 +40,10 @@ data/processed/<region>/   santa_fe y entre_rios
 Tabla maestra (ver docs/tabla_maestra.md):
 src/config.py, src/01_descargas.py ... src/05_tabla_maestra.py   ENSO, clima, NDVI y armado de la tabla
 
+Demo web (ver abajo):
+web/index.html, web/app.js, web/estilos.css   la página, sin dependencias
+web/datos.js               datos de la página, generados por src/exportar_web.py
+
 Frente 1 (datos de rinde, ver docs/frente1_cobertura.md):
 data/raw/                  extractos del MAGyP sin modificar
 src/rinde_limpio.py        rinde limpio con código INDEC -> data/processed/<region>/rinde_limpio_<region>.csv
@@ -59,6 +63,25 @@ uv run pytest tests
 
 Para otra región: dejar su tabla en `data/processed/<region>/tabla_maestra.csv` y correr con
 `AGRO_REGION=<region>`.
+
+## Demo web
+
+Una página para consultar por departamento: el mapa de Santa Fe y Entre Ríos, el rinde de cada campaña
+contra lo que predijo el modelo, el error del modelo comparado con el promedio de las campañas
+anteriores y, cuando esté, la estimación de 2026/27. Para verla, abrir `web/index.html` en el navegador:
+no necesita servidor (solo internet para las tipografías).
+
+Para actualizarla después de cambiar el modelo o la tabla maestra:
+
+```bash
+AGRO_REGION=santa_fe uv run python src/modelo.py
+AGRO_REGION=entre_rios uv run python src/modelo.py
+uv run --group datos python src/exportar_web.py    # vuelve a armar web/datos.js
+```
+
+`exportar_web.py` usa los polígonos del IGN, que no se versionan: si no están, correr antes
+`uv run --group datos python src/01_descargas.py`. La estimación de 2026/27 aparece sola cuando existen
+los archivos de `--predecir 2026/27` de las dos provincias y no les faltan datos.
 
 ## Entrada
 

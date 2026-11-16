@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Predictor de rinde</title>
+  <meta name="description" content="Rinde de soja y maíz por departamento en Santa Fe y Entre Ríos, y qué tan bien lo anticipa el modelo del imas+ tech club durante El Niño 2026/27.">
+  <link rel="icon" href="img/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="marca">
+    <div class="marca__interior">
+      <a class="marca__logo" href="https://github.com/imas-Tech-Club/AnalisisAgroClimatico">
+        <img src="img/logo-imas.png" alt="imas+ tech club" width="186" height="88">
+      </a>
+      <div class="marca__texto">
+        <h1>Predictor de rinde</h1>
+        <p>Soja y maíz por departamento en Santa Fe y Entre Ríos: cuánto rindió cada campaña y qué tan bien
+          lo anticipa el modelo, mientras pasa El Niño 2026/27.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <form class="filtros" aria-label="Qué ver" onsubmit="return false">
+      <fieldset class="filtro filtro--cultivo">
+        <legend>Cultivo</legend>
+        <div class="segmentado">
+          <input type="radio" name="cultivo" id="c-soja" value="soja" checked>
+          <label for="c-soja">Soja</label>
+          <input type="radio" name="cultivo" id="c-maiz" value="maiz">
+          <label for="c-maiz">Maíz</label>
+        </div>
+      </fieldset>
+      <label class="filtro">
+        <span>El mapa muestra</span>
+        <select id="metrica"></select>
+      </label>
+      <label class="filtro">
+        <span>Departamento</span>
+        <select id="departamento"></select>
+      </label>
+    </form>
+
+    <div class="tablero">
+      <section class="mapa" aria-labelledby="mapa-titulo">
+        <h2 id="mapa-titulo" class="mapa__titulo"></h2>
+        <div class="mapa__lienzo">
+          <svg id="mapa-svg" role="group" aria-label="Mapa de departamentos de Santa Fe y Entre Ríos"></svg>
+          <div class="tooltip" id="mapa-tooltip" hidden></div>
+        </div>
+        <div class="leyenda-mapa" id="leyenda-mapa"></div>
+      </section>
+
+      <section class="depto" aria-live="polite" aria-labelledby="depto-nombre">
+        <p class="depto__provincia" id="depto-provincia"></p>
+        <h2 class="depto__nombre" id="depto-nombre"></h2>
+
+        <dl class="cifras" id="cifras"></dl>
+
+        <figure class="grafico">
+          <figcaption>
+            <span class="grafico__titulo" id="grafico-titulo"></span>
+            <ul class="leyenda" id="leyenda-grafico"></ul>
+          </figcaption>
+          <div class="grafico__lienzo" id="grafico" tabindex="0"
+               aria-describedby="grafico-ayuda"></div>
+          <p class="nota" id="grafico-ayuda">Desde 2008/09, cada campaña se predijo solo con las anteriores y con
+            los datos de la campaña hasta abril, como si fuera en tiempo real. Con el teclado, las flechas recorren
+            las campañas.</p>
+        </figure>
+
+        <details class="tabla-datos">
+          <summary>Ver los números de cada campaña</summary>
+          <div class="tabla-datos__scroll"><table id="tabla-campanias"></table></div>
+        </details>
+
+        <div class="en-curso" id="en-curso"></div>
+      </section>
+    </div>
+
+    <section class="precision" aria-labelledby="precision-titulo">
+      <h2 id="precision-titulo">Qué tan bien anda el modelo</h2>
+      <p>Se probó como si fuera en tiempo real: cada campaña desde 2008/09 se predijo solo con las anteriores.
+        El error es la diferencia promedio entre lo predicho y el rinde oficial, en porcentaje. La comparación
+        justa es contra el promedio de las campañas anteriores, que es lo que uno usaría sin modelo.</p>
+      <div class="tabla-datos__scroll"><table id="tabla-precision"></table></div>
+      <p id="nota-noviembre"></p>
+      <p>La primera prueba real, la campaña 2025/26, salió mal: fue un año Niña con muy buena cosecha y el
+        modelo de ese momento se quedó corto en casi todos los departamentos, porque le daba demasiado peso a la
+        fase de El Niño. Desde el 16/11/2026 el modelo ya no usa ese índice directamente. Los detalles están en el
+        <a href="https://github.com/imas-Tech-Club/AnalisisAgroClimatico/blob/main/docs/frente4_modelo.md">documento del modelo</a>.</p>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>Hecho por el imas+ tech club, dentro del proyecto El Niño 2026/27. El código y los datos son abiertos:
+      <a href="https://github.com/imas-Tech-Club/AnalisisAgroClimatico">repositorio en GitHub</a>.</p>
+    <p>Fuentes: rinde oficial del Ministerio de Agricultura (MAGyP), verdor de los cultivos del satélite MODIS
+      (NASA), lluvia de CHIRPS, temperatura y humedad del suelo de NASA POWER, índice ONI de la NOAA y límites
+      departamentales del IGN.</p>
+    <p>El rinde es el promedio de cada departamento, no el de un lote. Esto no reemplaza el criterio de un
+      ingeniero agrónomo.</p>
+    <p class="pie__generado" id="generado"></p>
+  </footer>
+
+  <script src="datos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
